@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab & Grammar Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Nunito', sans-serif; background-color: #dcfce7; color: #1f2937; }
+        .brand-font { font-family: 'Nunito', sans-serif; font-weight: 900; }
+        .game-panel { background: #ffffff; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f3f4f6; }
+        .game-btn { background-color: #22c55e; color: #ffffff; border-bottom: 4px solid #16a34a; transition: all 0.1s; cursor: pointer; }
+        .game-btn:hover { background-color: #4ade80; }
+        .game-btn:active { transform: translateY(4px); border-bottom-width: 0px; margin-bottom: 4px; }
+        .game-btn:disabled { background-color: #9ca3af; border-color: #6b7280; cursor: not-allowed; transform: none; border-bottom-width: 4px; margin-bottom: 0; }
+        .game-input { background-color: #f3f4f6; border: 2px solid #e5e7eb; color: #1f2937; }
+        .game-input:focus { outline: none; border-color: #22c55e; background-color: #ffffff; }
+        .shape-bg-red { background-color: #ef4444; border-bottom: 4px solid #b91c1c; }
+        .shape-bg-blue { background-color: #3b82f6; border-bottom: 4px solid #1d4ed8; }
+        .shape-bg-yellow { background-color: #eab308; border-bottom: 4px solid #a16207; }
+        .shape-bg-green { background-color: #22c55e; border-bottom: 4px solid #15803d; }
+        .shape-btn { transition: transform 0.1s, filter 0.2s; border-radius: 0.5rem; cursor: pointer; }
+        .shape-btn:active { transform: scale(0.95); border-bottom-width: 0px; }
+        .shape-btn.disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .shape-icon { width: 40px; height: 40px; fill: #ffffff; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col items-center justify-center relative bg-green-50 text-gray-800">
+
+    <!-- START SCREEN -->
+    <div id="screen-start" class="w-full max-w-md p-8 game-panel flex flex-col items-center space-y-8 shadow-2xl border border-green-200">
+        <h1 class="text-5xl md:text-6xl font-black text-green-600 text-center tracking-widest uppercase brand-font drop-shadow-sm">Quiz<br>Master</h1>
+        <div class="w-full flex flex-col space-y-4 mt-8">
+            <button onclick="showScreen('screen-host-setup')" class="game-btn w-full py-4 text-xl font-bold rounded-lg uppercase tracking-wider">Host Game</button>
+            <div class="flex items-center my-2"><div class="flex-grow border-t border-gray-200"></div><span class="px-4 text-gray-400 font-bold text-sm uppercase tracking-wider">Or</span><div class="flex-grow border-t border-gray-200"></div></div>
+            <button onclick="showScreen('screen-player-join')" class="game-btn w-full py-4 text-xl font-bold rounded-lg uppercase tracking-wider bg-white text-green-600 border-green-200 hover:bg-green-50 border-2" style="color:#16a34a;">Join Game</button>
+        </div>
+    </div>
+
+    <!-- HOST SETUP -->
+    <div id="screen-host-setup" class="hidden w-full max-w-md p-8 game-panel rounded-lg flex flex-col items-center">
+        <h2 class="text-3xl font-black text-green-600 mb-2 brand-font uppercase">Game Settings</h2>
+        <div class="flex gap-2 w-full mb-4 mt-6">
+            <select id="filter-book" onchange="populateDropdown()" class="w-1/2 bg-gray-50 border-2 border-gray-200 text-gray-800 p-3 rounded-lg font-bold text-sm focus:outline-none focus:border-green-500">
+                <option value="all">All Books</option>
+                <option value="Elementary">Elementary</option>
+                <option value="Pre-Intermediate">Pre-Intermediate</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Intermediate Plus">Intermediate Plus</option>
+            </select>
+            <select id="filter-type" onchange="populateDropdown()" class="w-1/2 bg-gray-50 border-2 border-gray-200 text-gray-800 p-3 rounded-lg font-bold text-sm focus:outline-none focus:border-green-500">
+                <option value="all">All Types</option>
+                <option value="Vocab">Vocabulary</option>
+                <option value="Grammar">Grammar</option>
+                <option value="Mixed">Mixed</option>
+            </select>
+        </div>
+        <select id="quiz-select" class="w-full bg-gray-50 border-2 border-gray-200 text-gray-800 p-4 rounded-lg font-bold text-lg mb-8 focus:outline-none focus:border-green-500"></select>
+        <button onclick="initHost()" class="game-btn w-full py-4 text-xl font-bold rounded-lg mb-4 uppercase tracking-wider">Launch Lobby</button>
+        <button onclick="showScreen('screen-start')" class="text-gray-400 hover:text-green-500 font-bold transition uppercase tracking-wider text-sm mt-4">Cancel</button>
+    </div>
+
+    <!-- HOST LOBBY -->
+    <div id="screen-host-lobby" class="hidden w-full h-full flex flex-col bg-green-50">
+        <div class="bg-white shadow-sm p-6 flex justify-between items-center border-b border-gray-200">
+            <div class="text-2xl font-bold text-gray-500">Join with PIN:</div>
+            <div id="host-pin-display" class="text-6xl font-black text-gray-800 tracking-widest brand-font"></div>
+        </div>
+        <div class="flex-grow p-8 overflow-y-auto"><div id="host-player-list" class="flex flex-wrap justify-center gap-4"></div></div>
+        <div class="bg-white p-6 flex justify-between items-center border-t border-gray-200">
+            <div class="text-xl font-bold text-gray-500"><span id="host-player-count" class="text-green-600 font-black text-3xl">0</span> Players</div>
+            <button id="btn-start-quiz" onclick="startQuiz()" disabled class="game-btn py-3 px-12 text-xl font-bold rounded-lg uppercase">Start</button>
+        </div>
+    </div>
+
+    <!-- PLAYER JOIN -->
+    <div id="screen-player-join" class="hidden w-full max-w-sm p-8 game-panel flex flex-col items-center">
+        <h2 class="text-3xl font-black text-green-600 mb-8 brand-font uppercase">Join Game</h2>
+        <input type="text" id="input-pin" placeholder="Game PIN" class="game-input w-full text-center text-3xl font-black p-4 mb-4 rounded-lg uppercase" maxlength="6">
+        <input type="text" id="input-nickname" placeholder="Nickname" class="game-input w-full text-center text-xl font-bold p-4 mb-6 rounded-lg" maxlength="15">
+        <button onclick="joinGame()" id="btn-enter-game" class="game-btn w-full py-4 text-xl font-bold rounded-lg uppercase">Enter</button>
+        <button onclick="showScreen('screen-start')" class="text-gray-400 font-bold uppercase mt-6">Cancel</button>
+    </div>
+
+    <!-- PLAYER WAITING -->
+    <div id="screen-player-lobby" class="hidden w-full h-full flex flex-col items-center justify-center bg-green-50">
+        <div class="text-3xl font-black mb-4 text-gray-800 brand-font">You're in!</div>
+        <div class="text-lg text-gray-500 mb-8 font-bold">See your nickname on screen</div>
+        <div id="player-lobby-nickname" class="text-2xl font-bold text-green-600 px-8 py-3 rounded-full bg-white shadow-sm border border-gray-100"></div>
+    </div>
+
+    <!-- HOST QUESTION -->
+    <div id="screen-host-question" class="hidden w-full h-full flex flex-col bg-gray-50">
+        <div class="h-[45%] bg-white flex items-center justify-center p-8 border-b relative">
+            <h2 id="host-q-text" class="text-4xl font-bold text-center text-gray-800"></h2>
+            <div class="absolute left-8 w-24 h-24 rounded-full flex items-center justify-center bg-gray-50 text-4xl font-black border-4 brand-font"><span id="host-timer">20</span></div>
+            <div class="absolute right-8 text-center"><div class="text-5xl font-black brand-font" id="host-answers-count">0</div><div class="text-sm font-bold text-gray-400 uppercase">Answers</div></div>
+        </div>
+        <div class="flex-grow p-8"><div class="grid grid-cols-2 gap-6 h-full" id="host-answers-grid"></div></div>
+    </div>
+
+    <!-- PLAYER CONTROLLER -->
+    <div id="screen-player-question" class="hidden w-full h-full p-2 bg-gray-100">
+        <div class="grid grid-cols-2 grid-rows-2 gap-2 h-full">
+            <button onclick="submitAnswer(0)" id="p-btn-0" class="shape-btn shape-bg-red flex items-center justify-center"><svg class="shape-icon" viewBox="0 0 40 40"><path d="M20 5 L35 35 L5 35 Z" /></svg></button>
+            <button onclick="submitAnswer(1)" id="p-btn-1" class="shape-btn shape-bg-blue flex items-center justify-center"><svg class="shape-icon" viewBox="0 0 40 40"><path d="M20 5 L35 20 L20 35 L5 20 Z" /></svg></button>
+            <button onclick="submitAnswer(2)" id="p-btn-2" class="shape-btn shape-bg-yellow flex items-center justify-center"><svg class="shape-icon" viewBox="0 0 40 40"><path d="M20 35 A15 15 0 1 1 20 5 A15 15 0 1 1 20 35" /></svg></button>
+            <button onclick="submitAnswer(3)" id="p-btn-3" class="shape-btn shape-bg-green flex items-center justify-center"><svg class="shape-icon" viewBox="0 0 40 40"><path d="M5 5 H35 V35 H5 Z" /></svg></button>
+        </div>
+    </div>
+
+    <!-- HOST CHART RESULTS -->
+    <div id="screen-host-result" class="hidden w-full h-full flex flex-col bg-gray-50">
+         <div class="p-8 text-center bg-white border-b"><h2 id="host-res-q" class="text-3xl font-bold"></h2></div>
+        <div class="flex-grow flex items-end justify-center p-8 relative pb-20"><div class="flex h-full items-end justify-center border-b-4 border-gray-200 w-full" id="host-chart-bars"></div></div>
+        <div class="p-6 flex justify-end bg-white border-t"><button id="btn-next-question" onclick="showInterLeaderboard()" class="game-btn py-3 px-12 text-xl font-bold rounded-lg uppercase">Next</button></div>
+    </div>
+
+    <!-- HOST LEADERBOARD -->
+    <div id="screen-host-inter-leaderboard" class="hidden w-full h-full flex flex-col bg-green-50">
+        <div class="p-8 text-center bg-white border-b"><h2 id="leaderboard-title" class="text-4xl font-black uppercase tracking-wider">Top 5 Players</h2></div>
+        <div class="flex-grow flex flex-col items-center p-8"><div id="host-top5-list" class="w-full max-w-2xl flex flex-col gap-3"></div></div>
+        <div class="p-6 flex justify-end bg-white border-t"><button id="btn-leaderboard-next" onclick="nextQuestion()" class="game-btn py-3 px-12 text-xl font-bold rounded-lg uppercase">Next Question</button></div>
+    </div>
+
+    <!-- PLAYER RESULT -->
+    <div id="screen-player-result" class="hidden w-full h-full flex flex-col items-center justify-center text-white">
+        <div id="p-res-status" class="text-5xl font-black mb-4 brand-font"></div>
+        <div class="bg-black/20 rounded-full px-8 py-3"><span id="p-res-score" class="text-3xl font-bold"></span></div>
+    </div>
+
+    <script>
+        const rawData = {
+            "Elementary": {
+                "Vocab": [
+                    {q:"I always take a ____ in the morning.",options:["shower","breakfast","homework","lesson"],answer:0,time:20},
+                    {q:"My brother likes to ____ his bike.",options:["ride","drive","fly","go"],answer:0,time:20},
+                    {q:"We wear a ____ to school.",options:["uniform","pyjamas","swimsuit","towel"],answer:0,time:20},
+                    {q:"A person who paints is an ____.",options:["artist","actor","engineer","pilot"],answer:0,time:20},
+                    {q:"You cook food in the ____.",options:["kitchen","bathroom","bedroom","hall"],answer:0,time:20}
+                ],
+                "Grammar": [
+                    {q:"He ____ to school every day.",options:["goes","go","going","is go"],answer:0,time:20},
+                    {q:"I ____ from Spain.",options:["am","is","are","be"],answer:0,time:20},
+                    {q:"A city is ____ than a village.",options:["bigger","more big","biggest","big"],answer:0,time:20},
+                    {q:"I ____ to the cinema yesterday.",options:["went","go","goed","was go"],answer:0,time:20},
+                    {q:"She ____ play video games.",options:["isn't","aren't","am not","doesn't"],answer:3,time:20}
+                ]
+            },
+            "Pre-Intermediate": {
+                "Vocab": [
+                    {q:"We went on a guided ____.",options:["tour","trip","journey","walk"],answer:0,time:20},
+                    {q:"I put clothes in the washing ____.",options:["machine","box","cooker","fridge"],answer:0,time:20},
+                    {q:"We didn't need our ____.",options:["suncream","umbrella","luggage","ticket"],answer:1,time:20},
+                    {q:"The weather was ____, very beautiful.",options:["gorgeous","dull","terrible","freezing"],answer:0,time:20}
+                ],
+                "Grammar": [
+                    {q:"I ____ up the Eiffel Tower.",options:["didn't go","haven't gone","don't go","wasn't going"],answer:0,time:20},
+                    {q:"While I ____ my room, I found it.",options:["was tidying","tidied","have tidied","am tidying"],answer:0,time:20},
+                    {q:"You ____ drop litter.",options:["mustn't","don't have to","needn't","have to"],answer:0,time:20}
+                ]
+            },
+            "Intermediate": {
+                "Vocab": [
+                    {q:"In chess, the player with white makes a ____.",options:["guess","move","turn","rule"],answer:1,time:20},
+                    {q:"Writing mean things online is called ____.",options:["cyberbullying","vlogging","chatting","browsing"],answer:0,time:20},
+                    {q:"The referee controls the ____.",options:["pitch","track","court","match"],answer:3,time:20}
+                ],
+                "Grammar": [
+                    {q:"If I ____ you, I would tell her.",options:["were","am","will be","had been"],answer:0,time:20},
+                    {q:"We ____ each other since we were kids.",options:["have known","knew","know","are knowing"],answer:0,time:20}
+                ]
+            },
+            "Intermediate Plus": {
+                "Vocab": [
+                    {q:"The film was entirely shot on ____.",options:["location","studio","set","scene"],answer:0,time:20},
+                    {q:"The doctor prescribed ____.",options:["antibiotics","surgery","check-ups","symptoms"],answer:0,time:20}
+                ],
+                "Grammar": [
+                    {q:"By the time I am 30, it ____ disappeared.",options:["will have","will be","would have","has"],answer:0,time:20},
+                    {q:"The building, ____ was designed by him, opened.",options:["which","that","who","where"],answer:0,time:20}
+                ]
+            }
+        };
+
+        const QUIZ_LIBRARY = {};
+        const books = Object.keys(rawData);
+        
+        function shuffle(arr) {
+            let s = [...arr];
+            for (let i = s.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [s[i], s[j]] = [s[j], s[i]];
+            }
+            return s;
+        }
+
+        books.forEach(book => {
+            const vQs = rawData[book]["Vocab"];
+            const gQs = rawData[book]["Grammar"];
+            for(let i=1; i<=8; i++) {
+                QUIZ_LIBRARY[`${book}_v_${i}`] = { book, type: "Vocab", title: `[VOCAB] Unit ${i}`, questions: shuffle(vQs).slice(0, 10) };
+                QUIZ_LIBRARY[`${book}_g_${i}`] = { book, type: "Grammar", title: `[GRAMMAR] Unit ${i}`, questions: shuffle(gQs).slice(0, 10) };
+                QUIZ_LIBRARY[`${book}_m_${i}`] = { book, type: "Mixed", title: `[MIXED] Unit ${i} Review`, questions: shuffle([...vQs, ...gQs]).slice(0, 10) };
+            }
+        });
+
+        let peer = null;
+        let hostConnection = null;
+        let connections = {}; 
+        let players = {}; 
+        let isHost = false;
+        let currentQuiz = [];
+        let currentQIndex = 0;
+        let qTimer = null;
+        let timeLeft = 0;
+        let answerStartTime = 0;
+        let hasAnswered = false;
+
+        function showScreen(id) {
+            document.querySelectorAll('body > div').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function populateDropdown() {
+            const sel = document.getElementById('quiz-select');
+            const bFilt = document.getElementById('filter-book').value;
+            const tFilt = document.getElementById('filter-type').value;
+            sel.innerHTML = '';
+            for (let key in QUIZ_LIBRARY) {
+                let q = QUIZ_LIBRARY[key];
+                if ((bFilt==='all' || q.book===bFilt) && (tFilt==='all' || q.type===tFilt)) {
+                    sel.innerHTML += `<option value="${key}">${q.book} - ${q.title}</option>`;
+                }
+            }
+        }
+
+        function initHost() {
+            isHost = true;
+            const pin = Math.floor(100000 + Math.random() * 900000).toString();
+            peer = new Peer(pin); 
+            
+            peer.on('open', (id) => {
+                document.getElementById('host-pin-display').innerText = id;
+                showScreen('screen-host-lobby');
+            });
+
+            peer.on('connection', (conn) => {
+                // Ensure connection is fully open before handling data
+                conn.on('open', () => {
+                    connections[conn.peer] = conn;
+                });
+                conn.on('data', (data) => handleHostData(conn.peer, data));
+            });
+            
+            const qKey = document.getElementById('quiz-select').value;
+            let qs = QUIZ_LIBRARY[qKey].questions;
+            while(qs.length < 10) qs = qs.concat(qs);
+            currentQuiz = qs.slice(0, 10);
+        }
+
+        function handleHostData(peerId, data) {
+            if (data.type === 'JOIN') {
+                players[peerId] = { id: peerId, name: data.name, score: 0, ans: -1 };
+                updateHostLobby();
+            } else if (data.type === 'ANSWER') {
+                const q = currentQuiz[currentQIndex];
+                let pts = 0;
+                if (data.ans === q.answer) {
+                    const timeRatio = data.time / 20;
+                    pts = Math.round((1 - (timeRatio / 2)) * 1000);
+                    if(pts < 500) pts = 500;
+                }
+                players[peerId].ans = data.ans;
+                players[peerId].score += pts;
+                players[peerId].lastPts = pts;
+                checkAllAnswered();
+            }
+        }
+
+        function updateHostLobby() {
+            const list = document.getElementById('host-player-list');
+            list.innerHTML = '';
+            let count = 0;
+            for(let id in players) {
+                count++;
+                list.innerHTML += `<div class="game-panel px-6 py-3 font-bold text-xl">${players[id].name}</div>`;
+            }
+            document.getElementById('host-player-count').innerText = count;
+            document.getElementById('btn-start-quiz').disabled = count === 0;
+        }
+
+        function broadcast(msg) {
+            for(let id in connections) connections[id].send(msg);
+        }
+
+        function startQuiz() {
+            currentQIndex = 0;
+            broadcast({ type: 'START' });
+            displayHostQuestion();
+        }
+
+        function displayHostQuestion() {
+            for(let id in players) players[id].ans = -1;
+            document.getElementById('host-answers-count').innerText = "0";
+            
+            const q = currentQuiz[currentQIndex];
+            document.getElementById('host-q-text').innerText = q.q;
+            
+            const grid = document.getElementById('host-answers-grid');
+            grid.innerHTML = '';
+            const colors = ['shape-bg-red', 'shape-bg-blue', 'shape-bg-yellow', 'shape-bg-green'];
+            const svgs = ['M20 5 L35 35 L5 35 Z', 'M20 5 L35 20 L20 35 L5 20 Z', 'M20 35 A15 15 0 1 1 20 5 A15 15 0 1 1 20 35', 'M5 5 H35 V35 H5 Z'];
+            
+            q.options.forEach((opt, i) => {
+                grid.innerHTML += `<div class="${colors[i]} rounded-lg flex items-center h-24 text-2xl font-bold p-4 text-white"><svg class="shape-icon mr-4" viewBox="0 0 40 40"><path d="${svgs[i]}"/></svg>${opt}</div>`;
+            });
+
+            showScreen('screen-host-question');
+            
+            timeLeft = 20;
+            document.getElementById('host-timer').innerText = timeLeft;
+            qTimer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('host-timer').innerText = timeLeft;
+                if(timeLeft <= 0) showHostResults();
+            }, 1000);
+        }
+
+        function checkAllAnswered() {
+            let ansCount = Object.values(players).filter(p => p.ans !== -1).length;
+            document.getElementById('host-answers-count').innerText = ansCount;
+            if(ansCount >= Object.keys(players).length) showHostResults();
+        }
+
+        function showHostResults() {
+            clearInterval(qTimer);
+            const q = currentQuiz[currentQIndex];
+            document.getElementById('host-res-q').innerText = q.q;
+            
+            let counts = [0,0,0,0];
+            Object.values(players).forEach(p => { if(p.ans >= 0) counts[p.ans]++; });
+            
+            const max = Math.max(...counts, 1);
+            const bars = document.getElementById('host-chart-bars');
+            bars.innerHTML = '';
+            const colors = ['shape-bg-red', 'shape-bg-blue', 'shape-bg-yellow', 'shape-bg-green'];
+            
+            for(let i=0; i<4; i++) {
+                let h = (counts[i]/max)*100;
+                let isCorr = i === q.answer;
+                bars.innerHTML += `
+                    <div class="flex flex-col items-center justify-end h-64 w-24 mx-4 relative">
+                        <div class="w-full rounded-t-md ${colors[i]} ${isCorr ? 'border-4 border-white':'opacity-50'}" style="height:${h}%; min-height:10px;"></div>
+                        <div class="text-3xl font-bold mt-2 absolute -bottom-12">${counts[i]}</div>
+                    </div>`;
+            }
+
+            for(let id in players) {
+                let isCorr = players[id].ans === q.answer;
+                connections[id].send({ type: 'RESULT', correct: isCorr, pts: isCorr ? players[id].lastPts : 0 });
+            }
+
+            showScreen('screen-host-result');
+        }
+
+        function showInterLeaderboard() {
+            const list = document.getElementById('host-top5-list');
+            list.innerHTML = '';
+            
+            let sorted = Object.values(players).sort((a,b) => b.score - a.score).slice(0,5);
+            sorted.forEach((p, i) => {
+                list.innerHTML += `<div class="game-panel p-4 flex justify-between items-center text-2xl font-bold border-l-8 border-green-500">
+                    <div class="flex items-center"><span class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-4 text-lg">${i+1}</span>${p.name}</div>
+                    <div class="text-green-600">${p.score}</div>
+                </div>`;
+            });
+            showScreen('screen-host-inter-leaderboard');
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            if(currentQIndex < currentQuiz.length) {
+                broadcast({ type: 'NEXT' });
+                displayHostQuestion();
+            } else {
+                broadcast({ type: 'END' });
+                document.getElementById('leaderboard-title').innerText = "Final Podium";
+                document.getElementById('btn-leaderboard-next').innerText = "Finish";
+                document.getElementById('btn-leaderboard-next').onclick = () => window.location.reload();
+            }
+        }
+
+        // --- PLAYER ACTIONS ---
+        function joinGame() {
+            const pin = document.getElementById('input-pin').value;
+            const name = document.getElementById('input-nickname').value;
+            if(!pin || !name) return;
+
+            document.getElementById('btn-enter-game').innerText = "Connecting...";
+            peer = new Peer();
+            peer.on('open', () => {
+                // ADDED: reliable: true enforces guaranteed message delivery
+                hostConnection = peer.connect(pin, { reliable: true });
+                
+                hostConnection.on('open', () => {
+                    // ADDED: 500ms delay to guarantee the host is fully ready to catch the JOIN message
+                    setTimeout(() => {
+                        hostConnection.send({ type: 'JOIN', name: name });
+                        document.getElementById('player-lobby-nickname').innerText = name;
+                        showScreen('screen-player-lobby');
+                    }, 500);
+                });
+                
+                hostConnection.on('data', handlePlayerData);
+                hostConnection.on('error', () => { alert("Invalid PIN"); showScreen('screen-player-join'); });
+            });
+        }
+
+        function handlePlayerData(data) {
+            if(data.type === 'START' || data.type === 'NEXT') {
+                hasAnswered = false;
+                answerStartTime = Date.now();
+                document.querySelectorAll('.shape-btn').forEach(b => { b.style.opacity='1'; b.classList.remove('disabled'); });
+                showScreen('screen-player-question');
+            } else if (data.type === 'RESULT') {
+                const screen = document.getElementById('screen-player-result');
+                screen.className = `w-full h-full flex flex-col items-center justify-center text-white ${data.correct ? 'bg-green-500':'bg-red-500'}`;
+                document.getElementById('p-res-status').innerText = data.correct ? "Correct!" : "Incorrect";
+                document.getElementById('p-res-score').innerText = data.correct ? `+${data.pts}` : "";
+                showScreen('screen-player-result');
+            } else if (data.type === 'END') {
+                document.getElementById('p-res-status').innerText = "Game Over! Look at the board.";
+                document.getElementById('p-res-score').innerText = "";
+            }
+        }
+
+        function submitAnswer(idx) {
+            if(hasAnswered) return;
+            hasAnswered = true;
+            const timeTaken = (Date.now() - answerStartTime) / 1000;
+            hostConnection.send({ type: 'ANSWER', ans: idx, time: timeTaken });
+            
+            document.querySelectorAll('.shape-btn').forEach((b, i) => {
+                if(i !== idx) b.style.opacity = '0.3';
+                b.classList.add('disabled');
+            });
+        }
+
+        window.onload = () => { populateDropdown(); };
+    </script>
+</body>
+</html>
