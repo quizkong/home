@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab & Grammar Master - Multiplayer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f0fdf4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: white; border-radius: 1rem; box-shadow: 0 10px 25px rgba(34, 197, 94, 0.1); }
+        .btn-green { background-color: #22c55e; color: white; transition: all 0.2s; }
+        .btn-green:hover { background-color: #16a34a; transform: translateY(-2px); }
+        .btn-blue { background-color: #3b82f6; color: white; transition: all 0.2s; }
+        .btn-blue:hover { background-color: #2563eb; transform: translateY(-2px); }
+        .btn-answer { background-color: #e2e8f0; color: #1e293b; transition: all 0.2s; }
+        .btn-answer:hover { background-color: #d1d5db; transform: scale(1.02); }
+        .correct { background-color: #22c55e !important; color: white !important; }
+        .incorrect { background-color: #ef4444 !important; color: white !important; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-2xl glass-panel p-8">
+        
+        <!-- 1. Role Selection Screen -->
+        <div id="role-screen" class="text-center">
+            <h1 class="text-5xl font-bold text-green-600 mb-4">Quiz Master</h1>
+            <p class="text-gray-500 mb-10 text-lg">Are you hosting a game or joining one?</p>
+            
+            <div class="flex flex-col gap-4">
+                <button onclick="showScreen('setup-screen')" class="btn-green w-full py-4 rounded-xl text-xl font-bold shadow-md">Host a Game</button>
+                <button onclick="showScreen('join-screen')" class="btn-blue w-full py-4 rounded-xl text-xl font-bold shadow-md">Join a Game</button>
+            </div>
+        </div>
+
+        <!-- 2. Host Setup Screen -->
+        <div id="setup-screen" class="hidden text-center">
+            <h1 class="text-3xl font-bold text-green-600 mb-2">Host Setup</h1>
+            <p class="text-gray-500 mb-8">Select the textbook and topic for your students.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-left">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Textbook</label>
+                    <select id="book-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                        <option value="Elementary">Life Vision Elementary</option>
+                        <option value="Pre-Intermediate">Life Vision Pre-Intermediate</option>
+                        <option value="Intermediate">Life Vision Intermediate</option>
+                        <option value="Intermediate Plus">Life Vision Intermediate Plus</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quiz Type</label>
+                    <select id="type-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                        <option value="combined">Vocab & Grammar (Mixed)</option>
+                        <option value="vocab">Vocabulary Only</option>
+                        <option value="grammar">Grammar Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="relative w-full mb-8 text-left">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Specific Lesson Topic</label>
+                <select id="quiz-select" class="w-full bg-gray-50 border-2 border-gray-200 text-gray-800 p-4 rounded-lg font-bold text-lg focus:outline-none focus:border-green-500 focus:ring-0 appearance-none cursor-pointer"></select>
+            </div>
+
+            <button onclick="generateGamePin()" class="btn-green w-full py-4 rounded-xl text-xl font-bold shadow-lg">Generate Game PIN</button>
+            <button onclick="showScreen('role-screen')" class="mt-4 text-gray-500 hover:text-gray-800 underline">Back</button>
+        </div>
+
+        <!-- 3. Host Lobby Screen -->
+        <div id="host-lobby-screen" class="hidden text-center">
+            <h2 class="text-2xl text-gray-600 mb-2">Join at <span class="font-bold">quizmaster.app</span> with Game PIN:</h2>
+            <div id="game-pin-display" class="text-6xl font-black text-green-600 tracking-widest mb-8">123456</div>
+            <div class="p-6 bg-gray-50 rounded-lg mb-8">
+                <p class="text-gray-500">Waiting for players to join...</p>
+                <div class="mt-4 text-xl font-bold text-gray-800">Players: 0</div>
+            </div>
+            <button onclick="startQuiz()" class="btn-green w-full py-4 rounded-xl text-xl font-bold shadow-lg">Start Game</button>
+        </div>
+
+        <!-- 4. Player Join Screen -->
+        <div id="join-screen" class="hidden text-center">
+            <h1 class="text-3xl font-bold text-blue-600 mb-6">Join Game</h1>
+            <input type="text" id="pin-input" placeholder="Game PIN" class="w-full p-4 mb-4 border-2 border-gray-300 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+            <input type="text" id="name-input" placeholder="Nickname" class="w-full p-4 mb-8 border-2 border-gray-300 rounded-xl text-center text-xl focus:border-blue-500 outline-none">
+            <button onclick="joinLobby()" class="btn-blue w-full py-4 rounded-xl text-xl font-bold shadow-lg">Enter</button>
+            <button onclick="showScreen('role-screen')" class="mt-4 text-gray-500 hover:text-gray-800 underline">Back</button>
+        </div>
+
+        <!-- 5. Player Waiting Screen -->
+        <div id="player-waiting-screen" class="hidden text-center">
+            <h2 class="text-3xl font-bold text-blue-600 mb-4">You're in!</h2>
+            <p class="text-xl text-gray-600">See your nickname on screen.</p>
+            <div class="mt-8 animate-pulse text-gray-400">Waiting for host to start...</div>
+            <button onclick="startQuiz()" class="mt-12 text-sm text-gray-400 underline">Simulate Host Starting Game</button>
+        </div>
+
+        <!-- 6. Active Quiz Screen -->
+        <div id="quiz-screen" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <span id="question-counter" class="text-green-600 font-bold bg-green-100 px-3 py-1 rounded-full">Question 1/10</span>
+                <span id="score-display" class="text-gray-600 font-bold">Score: 0</span>
+            </div>
+            
+            <h2 id="question-text" class="text-2xl font-bold text-gray-800 mb-8 text-center">Loading question...</h2>
+            
+            <div id="answers-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Answer buttons generated via JS -->
+            </div>
+        </div>
+
+        <!-- 7. Results Screen -->
+        <div id="results-screen" class="hidden text-center">
+            <h2 class="text-4xl font-bold text-green-600 mb-4">Quiz Complete!</h2>
+            <p class="text-2xl text-gray-700 mb-8">Final Score: <span id="final-score" class="font-bold text-green-600">0</span></p>
+            <button onclick="resetApp()" class="btn-green px-8 py-3 rounded-xl text-lg font-bold">Play Again</button>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'vocab-grammar-dual-book';
+        let firebaseConfig = { projectId: "mock-project" };
+        if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- SYLLABUS DATA (From PDFs) ---
+        const syllabusData = {
+            "Elementary": [
+                { unit: 1, vName: "Daily Routines & Free Time", gName: "Present Simple" },
+                { unit: 2, vName: "Sport, Fitness & Food", gName: "Adverbs of Freq & Quantifiers" },
+                { unit: 3, vName: "Clothes & Character", gName: "Present Continuous" },
+                { unit: 4, vName: "Houses & Places", gName: "Comparatives & Superlatives" },
+                { unit: 5, vName: "Art & Entertainment", gName: "Past Simple (be/can)" },
+                { unit: 6, vName: "Technology & Everyday Items", gName: "Past Simple (Irregular)" },
+                { unit: 7, vName: "Life Goals & Jobs", gName: "Be Going To & Will" },
+                { unit: 8, vName: "Travel & Holidays", gName: "Present Perfect" }
+            ],
+            "Pre-Intermediate": [
+                { unit: 1, vName: "A Day Out & Travel", gName: "Past Simple & Q Forms" },
+                { unit: 2, vName: "Housework & Homes", gName: "Past Continuous" },
+                { unit: 3, vName: "Healthy Lifestyles & Food", gName: "Quantifiers & Modals" },
+                { unit: 4, vName: "Weather & Disasters", gName: "Comparatives & Superlatives" },
+                { unit: 5, vName: "School & After-school", gName: "Future Tenses & Conditionals" },
+                { unit: 6, vName: "Life Experiences & Stages", gName: "Present Perfect vs Past Simple" },
+                { unit: 7, vName: "Space & Inventions", gName: "Second Conditional & Passives" },
+                { unit: 8, vName: "Jobs & Shopping", gName: "Past Perfect" }
+            ],
+            "Intermediate": [
+                { unit: 1, vName: "Games & Entertainment", gName: "Narrative Tenses" },
+                { unit: 2, vName: "Friendships & Feelings", gName: "Present Perfect & Used To" },
+                { unit: 3, vName: "Going Online & Numbers", gName: "Modals of Deduction" },
+                { unit: 4, vName: "Sport & Exercise", gName: "Quantifiers" },
+                { unit: 5, vName: "Senses & Food", gName: "Future Tenses" },
+                { unit: 6, vName: "Travel & Homes", gName: "Relative Clauses" },
+                { unit: 7, vName: "Social Issues & Education", gName: "Reported Speech" },
+                { unit: 8, vName: "Shopping & Crime", gName: "Third Conditional" }
+            ],
+            "Intermediate Plus": [
+                { unit: 1, vName: "Film-making & Written Word", gName: "Present Tenses" },
+                { unit: 2, vName: "Geography & Environment", gName: "Future Continuous & Perfect" },
+                { unit: 3, vName: "Illnesses & Treatments", gName: "Question Forms" },
+                { unit: 4, vName: "Personality & Family", gName: "Reported Speech" },
+                { unit: 5, vName: "Global Trade & Finance", gName: "Modals (Advice & Obligation)" },
+                { unit: 6, vName: "Homes & Property", gName: "Relative Clauses & Wishes" },
+                { unit: 7, vName: "Higher Education & Study", gName: "Verb Patterns" },
+                { unit: 8, vName: "Job Applications & Crime", gName: "Habitual Behaviour" }
+            ]
+        };
+
+        // --- SPECIFIC QUESTION BANKS ---
+        const questionBanks = {
+            "Elementary": {
+                1: { vocab: [{q:"You ___ a shower in the bathroom.", a:["have","make","do","go"], i:0}, {q:"In my free time, I ___ to music.", a:["listen","hear","play","make"], i:0}], grammar: [{q:"My brother ___ 15 years old.", a:["is","are","am","be"], i:0}, {q:"He always ___ his homework in the evening.", a:["does","do","doing","is do"], i:0}] },
+                2: { vocab: [{q:"You use a ___ to hit the ball in tennis.", a:["racket","net","pitch","goal"], i:0}, {q:"Which of these is a vegetable?", a:["Carrot","Apple","Banana","Chicken"], i:0}], grammar: [{q:"I ___ have toast for breakfast.", a:["usually","usual","never is","sometime"], i:0}, {q:"There ___ an apple on the table.", a:["is","are","have","be"], i:0}] },
+                3: { vocab: [{q:"You wear these on your feet before your shoes.", a:["Socks","Shirts","Skirts","Hats"], i:0}, {q:"Someone who makes you laugh is ___.", a:["funny","serious","quiet","sad"], i:0}], grammar: [{q:"Look! It ___ raining.", a:["is","are","am","does"], i:0}, {q:"What ___ you wearing today?", a:["are","is","do","am"], i:0}] },
+                4: { vocab: [{q:"You cook food in the ___.", a:["kitchen","bathroom","bedroom","hall"], i:0}, {q:"A large area of water with land around it is a ___.", a:["lake","river","island","mountain"], i:0}], grammar: [{q:"A city is ___ than a village.", a:["bigger","more big","biggest","big"], i:0}, {q:"This is the ___ building in the world.", a:["tallest","taller","most tall","tall"], i:0}] },
+                5: { vocab: [{q:"A person who paints or draws is an ___.", a:["artist","actor","engineer","pilot"], i:0}, {q:"At a music ___, many bands play live.", a:["festival","exhibition","series","museum"], i:0}], grammar: [{q:"I ___ to the cinema yesterday.", a:["went","go","goed","was go"], i:0}, {q:"We ___ very happy at the party.", a:["were","was","did","are"], i:0}] },
+                6: { vocab: [{q:"If your phone is dead, you need a ___.", a:["charger","speaker","app","file"], i:0}, {q:"You can ___ messages to your friends.", a:["send","play","scroll","click"], i:0}], grammar: [{q:"She ___ see her friends last weekend.", a:["didn't","wasn't","doesn't","not"], i:0}, {q:"___ you watch the film last night?", a:["Did","Do","Were","Are"], i:0}] },
+                7: { vocab: [{q:"A ___ looks after your teeth.", a:["dentist","pilot","farmer","journalist"], i:0}, {q:"A person who flies a plane.", a:["Pilot","Engineer","Teacher","Artist"], i:0}], grammar: [{q:"I ___ going to study maths next year.", a:["am","is","are","will"], i:0}, {q:"I think it ___ snow tomorrow.", a:["will","is going","does","is"], i:0}] },
+                8: { vocab: [{q:"To travel by air, you take a ___.", a:["flight","boat","coach","tram"], i:0}, {q:"A place where you sleep in a tent is a ___.", a:["campsite","hotel","guest house","resort"], i:0}], grammar: [{q:"___ you ever been to London?", a:["Have","Has","Did","Were"], i:0}, {q:"She has never ___ sushi.", a:["eaten","eat","ate","eating"], i:0}] }
+            },
+            "Pre-Intermediate": {
+                1: { vocab: [{q:"We went on a guided ___ of the ruins.", a:["tour","trip","journey","walk"], i:0}, {q:"To get on a plane or train.", a:["Board","Depart","Arrive","Land"], i:0}], grammar: [{q:"We ___ round any shops in London.", a:["didn't look","not looked","weren't looking","don't look"], i:0}, {q:"Eurotunnel ___ in 1994.", a:["opened","did open","opens","opening"], i:0}] },
+                2: { vocab: [{q:"Empty the ___ machine.", a:["washing","cleaning","water","sweeping"], i:0}, {q:"I was so ___ when I fell.", a:["embarrassed","confused","annoyed","disappointed"], i:0}], grammar: [{q:"At 7 o'clock yesterday, I ___ video games.", a:["was playing","played","play","am playing"], i:0}, {q:"While I ___ my clothes, I burned my hand.", a:["was ironing","ironed","am ironing","iron"], i:0}] },
+                3: { vocab: [{q:"Eat at least five ___ of fruit a day.", a:["portions","sizes","diets","meals"], i:0}, {q:"To help your body, do a ___ up.", a:["warm","hot","stretch","run"], i:0}], grammar: [{q:"How ___ minutes do you need to tidy?", a:["many","much","a little","a lot"], i:0}, {q:"You ___ drop litter at the playground.", a:["mustn't","don't have to","needn't","have to"], i:0}] },
+                4: { vocab: [{q:"A long period without rain.", a:["Drought","Heatwave","Flood","Tsunami"], i:0}, {q:"Explosion of gas from a mountain.", a:["Volcanic eruption","Earthquake","Flood","Heatwave"], i:0}], grammar: [{q:"I think Portugal is sunnier ___ the UK.", a:["than","that","then","as"], i:0}, {q:"He is the ___ student in class.", a:["tallest","taller","most tall","tall"], i:0}] },
+                5: { vocab: [{q:"You study for a degree at ___.", a:["University","Primary school","Canteen","Stage"], i:0}, {q:"A piece of written homework is an ___.", a:["Assignment","Grade","Qualification","Term"], i:0}], grammar: [{q:"The train ___ at 10:35 a.m.", a:["arrives","is arriving","will arrive","going to arrive"], i:0}, {q:"If you ___ for the exam, you will fail.", a:["don't revise","didn't revise","won't revise","aren't revising"], i:0}] },
+                6: { vocab: [{q:"To keep money safe, open a bank ___.", a:["account","card","business","flat"], i:0}, {q:"A celebration of the date two were married.", a:["Wedding anniversary","Birthday","Graduation","Retirement"], i:0}], grammar: [{q:"___ you ever been to a concert?", a:["Have","Did","Were","Are"], i:0}, {q:"I ___ up the Eiffel Tower because I'm scared.", a:["didn't go","haven't gone","don't go","wasn't going"], i:0}] },
+                7: { vocab: [{q:"Equipment that makes things look bigger.", a:["Telescope","Spacesuit","Satellite","Rocket"], i:0}, {q:"Sending a spaceship into space.", a:["Launch","Milestone","Mission","Orbit"], i:0}], grammar: [{q:"If I ___ you, I would tell her.", a:["were","am","will be","had been"], i:0}, {q:"Radium ___ by Marie Curie.", a:["was discovered","discovered","is discovered","has discovered"], i:0}] },
+                8: { vocab: [{q:"Money you earn every hour.", a:["Wages","Salary","Debt","Refund"], i:0}, {q:"If the trousers don't fit, take them ___.", a:["back","on","in","out"], i:0}], grammar: [{q:"If he hadn't left his wallet, he ___ a new mobile.", a:["would have bought","bought","had bought","would buy"], i:0}, {q:"We ___ to the cinema after eating.", a:["went","had gone","have gone","was going"], i:0}] }
+            },
+            "Intermediate": {
+                1: { vocab: [{q:"The player with white pieces is the first to make a ___.", a:["move","guess","turn","rule"], i:0}, {q:"In a puzzle, follow the ___ to work out the answer.", a:["clues","teammates","turns","rules"], i:0}], grammar: [{q:"When I arrived, my friends ___ for me.", a:["were waiting","have waited","had waited","wait"], i:0}, {q:"While Anna ___, Sami cheated.", a:["wasn't looking","hadn't looked","isn't looking","didn't look"], i:0}] },
+                2: { vocab: [{q:"A good friend should show everyone ___.", a:["respect","loyalty","honesty","funny"], i:0}, {q:"My best friend always ___ me up when I'm sad.", a:["cheers","makes","falls","gets"], i:0}], grammar: [{q:"My family ___ to the UK six months ago.", a:["came","has come","was coming","had come"], i:0}, {q:"It ___ snow every year, but now winters aren't cold.", a:["used to","was used to","gets used to","use to"], i:0}] },
+                3: { vocab: [{q:"Breaking into a computer system is called ___.", a:["hacking","phishing","trolling","cyberbullying"], i:0}, {q:"Sending a fake email to get personal details is ___.", a:["phishing","hacking","cyberbullying","trolling"], i:0}], grammar: [{q:"That rating is difficult to believe. It ___ be fake.", a:["must","can't","might","should"], i:0}, {q:"She's wearing a sweater in 30 degrees! She ___ be hot.", a:["must","may","can't","might"], i:0}] },
+                4: { vocab: [{q:"The person who controls a football match is the ___.", a:["referee","coach","spectator","competitor"], i:0}, {q:"Sara was injured so she had to drop ___ of the race.", a:["out","off","down","away"], i:0}], grammar: [{q:"I don't have ___ time to play sports.", a:["much","many","most","each"], i:0}, {q:"Jack got very ___ sleep last night.", a:["little","a few","few","a little"], i:0}] },
+                5: { vocab: [{q:"This coffee must be quite old - it tastes really ___.", a:["bitter","sweet","spicy","smooth"], i:0}, {q:"Make sure you have all the ___ before cooking.", a:["ingredients","portions","diets","additives"], i:0}], grammar: [{q:"I'm really tired. I think I ___ to bed.", a:["'ll go","'m going","go","'m going to go"], i:0}, {q:"The plane ___ at 12.15.", a:["leaves","will leave","is leaving","going to leave"], i:0}] },
+                6: { vocab: [{q:"I need a return ticket, not a ___ ticket.", a:["one-way","flight","double","return"], i:0}, {q:"The castle is built high above the sea; the location is ___.", a:["breathtaking","depressing","dull","polluted"], i:0}], grammar: [{q:"I don't want to live in a place ___ there are no shops.", a:["where","which","who","whose"], i:0}, {q:"My grandfather, ___ is 80, goes running.", a:["who","that","which","whose"], i:0}] },
+                7: { vocab: [{q:"Oxfam was founded as a disaster ___ agency.", a:["relief","crisis","charity","poverty"], i:0}, {q:"I work ___ from 9 to 1.", a:["part-time","full-time","apprenticeship","overtime"], i:0}], grammar: [{q:"He asked me where I ___ at the weekend.", a:["had gone","went","was going","have gone"], i:0}, {q:"Lottie said she ___ taking up German.", a:["was","is","had","has"], i:0}] },
+                8: { vocab: [{q:"Buy two items and get the third free, that's a ___.", a:["discount","brand","budget","delivery"], i:0}, {q:"Advertisers use catchy music to ___ customers.", a:["attract","launch","produce","compare"], i:0}], grammar: [{q:"If you'd bought those jeans, they ___ much cheaper.", a:["would have been","had been","were","would be"], i:0}, {q:"My dad advised ___ half the money I earned.", a:["me to save","me save","I save","saving"], i:0}] }
+            },
+            "Intermediate Plus": {
+                1: { vocab: [{q:"We created computer images of monsters and dragons. These are ___.", a:["special effects","locations","scripts","plots"], i:0}, {q:"The hardest part of a film is writing the ___.", a:["script","director","audience","costume"], i:0}], grammar: [{q:"I ___ those shoes.", a:["don't like","am not liking","doesn't like","not like"], i:0}, {q:"They ___ to play chess at the moment.", a:["are learning","learn","learns","is learning"], i:0}] },
+                2: { vocab: [{q:"A large area with very few plants.", a:["Desert","Forest","Valley","Stream"], i:0}, {q:"Carbon dioxide is a greenhouse ___.", a:["gas","panel","turbine","climate"], i:0}], grammar: [{q:"This time next week we ___ at the seaside.", a:["will be enjoying","have enjoyed","will enjoyed","are enjoying"], i:0}, {q:"By 2050, temperatures ___ warmer.", a:["will be","will have been","are","were"], i:0}] },
+                3: { vocab: [{q:"A cough and fever are often ___ of flu.", a:["symptoms","cures","treatments","tests"], i:0}, {q:"Antibiotics are used to cure serious ___.", a:["infections","surgery","check-ups","burns"], i:0}], grammar: [{q:"Can you tell me where the library ___?", a:["is","are","does","be"], i:0}, {q:"Do you know if I ___ see the doctor?", a:["can","am","do","will"], i:0}] },
+                4: { vocab: [{q:"Finley is focused on himself - he never shares. He is ___.", a:["selfish","generous","easy-going","modest"], i:0}, {q:"Amira shares everything with friends. She is ___.", a:["generous","selfish","ambitious","determined"], i:0}], grammar: [{q:"My teacher told me ___ my coursework on time.", a:["to hand in","hand in","handing in","handed in"], i:0}, {q:"He said he ___ an interview yesterday.", a:["had had","has had","was having","have had"], i:0}] },
+                5: { vocab: [{q:"People who buy products are ___.", a:["consumers","producers","importers","retailers"], i:0}, {q:"When demand is greater than ___, prices go up.", a:["supply","trade","stock","market"], i:0}], grammar: [{q:"You ___ talk in the library. It's prohibited.", a:["mustn't","don't have to","shouldn't","needn't"], i:0}, {q:"We ___ hand in our essays on Friday. It's obligatory.", a:["must","should","can","might"], i:0}] },
+                6: { vocab: [{q:"A comfortable piece of furniture that you sit in.", a:["Armchair","Ceiling","Freezer","Attic"], i:0}, {q:"A room at the top of a house, inside the roof.", a:["Attic","Basement","Hall","Cupboard"], i:0}], grammar: [{q:"The building, ___ was designed by a famous architect, opened yesterday.", a:["which","that","who","where"], i:0}, {q:"I wish I ___ concentrate on learning this.", a:["could","would","can","will"], i:0}] },
+                7: { vocab: [{q:"Learning after school, usually at college or university is ___.", a:["higher education","primary school","state school","certificate"], i:0}, {q:"A person who has completed a degree at university is a ___.", a:["graduate","academic","campus","semester"], i:0}], grammar: [{q:"It's easier to learn ___ when you're young.", a:["to swim","swimming","swim","swam"], i:0}, {q:"Most of my friends avoid ___ at the weekend.", a:["studying","to study","study","studied"], i:0}] },
+                8: { vocab: [{q:"Stealing food from a supermarket is ___.", a:["shoplifting","robbery","vandalism","burglary"], i:0}, {q:"To prevent a burglary, lock all your doors and ___.", a:["windows","pockets","cars","suspects"], i:0}], grammar: [{q:"My brother ___ often start the day with a meeting.", a:["will","used to","would","is"], i:0}, {q:"I ___ work in a busy office.", a:["used to","would","will","am"], i:0}] }
+            }
+        };
+
+        // --- APP ENGINE ---
+
+        let currentQuestions = [];
+        let currentQIndex = 0;
+        let score = 0;
+        let canAnswer = true;
+
+        // Shuffle arrays for dynamic generation
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Generate 10-question quiz by duplicating/shuffling the 2 base questions if needed
+        function expandArray(arr, count) {
+            let shuffled = shuffleArray(arr);
+            let selected = [];
+            while(selected.length < count) {
+                selected = selected.concat(shuffled);
+            }
+            return selected.slice(0, count).map(q => {
+                // Also shuffle the visual answers without losing the correct one
+                let newAnswers = [...q.a];
+                let correctStr = newAnswers[q.i];
+                newAnswers = shuffleArray(newAnswers);
+                return {
+                    question: q.q,
+                    options: newAnswers,
+                    answer: newAnswers.indexOf(correctStr)
+                };
+            });
+        }
+
+        // Combine all questions from a book for the mixed reviews
+        function getAllQsForBook(book, type) {
+            let all = [];
+            for (let i = 1; i <= 8; i++) {
+                if(questionBanks[book][i] && questionBanks[book][i][type]) {
+                    all = all.concat(questionBanks[book][i][type]);
+                }
+            }
+            return all;
+        }
+
+        // Generate FULL Library 
+        const QUIZ_LIBRARY = {};
+        for (const book in syllabusData) {
+            // 1. Generate 8 Core Units
+            syllabusData[book].forEach(u => {
+                // Vocab
+                QUIZ_LIBRARY[`${book}_v_${u.unit}`] = {
+                    book: book, type: "vocab",
+                    title: `[VOCAB] Unit ${u.unit}: ${u.vName}`,
+                    questions: expandArray(questionBanks[book][u.unit].vocab, 10)
+                };
+                // Grammar
+                QUIZ_LIBRARY[`${book}_g_${u.unit}`] = {
+                    book: book, type: "grammar",
+                    title: `[GRAMMAR] Unit ${u.unit}: ${u.gName}`,
+                    questions: expandArray(questionBanks[book][u.unit].grammar, 10)
+                };
+                // Combined Vocab & Grammar
+                QUIZ_LIBRARY[`${book}_c_${u.unit}`] = {
+                    book: book, type: "combined",
+                    title: `[MIXED] Unit ${u.unit}: ${u.vName} & ${u.gName}`,
+                    questions: shuffleArray([...expandArray(questionBanks[book][u.unit].vocab, 5), ...expandArray(questionBanks[book][u.unit].grammar, 5)])
+                };
+            });
+
+            // 2. Generate remaining Mixed Reviews per type
+            const allVocab = getAllQsForBook(book, "vocab");
+            const allGrammar = getAllQsForBook(book, "grammar");
+
+            for (let i = 9; i <= 25; i++) {
+                QUIZ_LIBRARY[`${book}_v_${i}`] = {
+                    book: book, type: "vocab",
+                    title: `[VOCAB] Mixed Review ${i - 8}`,
+                    questions: expandArray(allVocab, 10)
+                };
+                QUIZ_LIBRARY[`${book}_g_${i}`] = {
+                    book: book, type: "grammar",
+                    title: `[GRAMMAR] Mixed Review ${i - 8}`,
+                    questions: expandArray(allGrammar, 10)
+                };
+                QUIZ_LIBRARY[`${book}_c_${i}`] = {
+                    book: book, type: "combined",
+                    title: `[MIXED] Full Book Review ${i - 8}`,
+                    questions: shuffleArray([...expandArray(allVocab, 5), ...expandArray(allGrammar, 5)])
+                };
+            }
+        }
+
+        function showScreen(screenId) {
+            const screens = ['role-screen', 'setup-screen', 'host-lobby-screen', 'join-screen', 'player-waiting-screen', 'quiz-screen', 'results-screen'];
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // Expose functions globally for HTML buttons
+        window.showScreen = showScreen;
+
+        function populateQuizDropdown() {
+            const quizSelect = document.getElementById('quiz-select');
+            const bookFilter = document.getElementById('book-select').value;
+            const typeFilter = document.getElementById('type-select').value;
+            
+            quizSelect.innerHTML = '';
+
+            for (const [key, quiz] of Object.entries(QUIZ_LIBRARY)) {
+                if (quiz.book !== bookFilter) continue;
+                if (quiz.type !== typeFilter) continue;
+                
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = quiz.title;
+                option.className = "bg-white text-gray-800 font-bold";
+                quizSelect.appendChild(option);
+            }
+        }
+        window.populateQuizDropdown = populateQuizDropdown;
+
+        function generateGamePin() {
+            const pin = Math.floor(100000 + Math.random() * 900000); 
+            document.getElementById('game-pin-display').innerText = pin;
+            showScreen('host-lobby-screen');
+        }
+        window.generateGamePin = generateGamePin;
+
+        function joinLobby() {
+            const pin = document.getElementById('pin-input').value;
+            const name = document.getElementById('name-input').value;
+            if (pin.length > 3 && name.length > 0) {
+                showScreen('player-waiting-screen');
+            } else {
+                alert("Please enter a valid PIN and Nickname.");
+            }
+        }
+        window.joinLobby = joinLobby;
+
+        function startQuiz() {
+            const selectedQuizKey = document.getElementById('quiz-select').value;
+            currentQuestions = QUIZ_LIBRARY[selectedQuizKey].questions;
+            
+            currentQIndex = 0;
+            score = 0;
+            
+            showScreen('quiz-screen');
+            loadQuestion();
+        }
+        window.startQuiz = startQuiz;
+
+        function loadQuestion() {
+            canAnswer = true;
+            const qData = currentQuestions[currentQIndex];
+            
+            document.getElementById('question-counter').innerText = `Question ${currentQIndex + 1}/${currentQuestions.length}`;
+            document.getElementById('score-display').innerText = `Score: ${score}`;
+            document.getElementById('question-text').innerText = qData.question;
+            
+            const grid = document.getElementById('answers-grid');
+            grid.innerHTML = '';
+            
+            qData.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-answer w-full p-4 text-lg font-semibold rounded-xl border-2 border-transparent';
+                btn.innerText = opt;
+                btn.onclick = () => selectAnswer(idx, btn);
+                grid.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(idx, btn) {
+            if (!canAnswer) return;
+            canAnswer = false;
+            
+            const qData = currentQuestions[currentQIndex];
+            const isCorrect = (idx === qData.answer);
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score += 100;
+            } else {
+                btn.classList.add('incorrect');
+                document.getElementById('answers-grid').children[qData.answer].classList.add('correct');
+            }
+            
+            document.getElementById('score-display').innerText = `Score: ${score}`;
+            
+            setTimeout(() => {
+                currentQIndex++;
+                if (currentQIndex < currentQuestions.length) {
+                    loadQuestion();
+                } else {
+                    showScreen('results-screen');
+                    document.getElementById('final-score').innerText = score;
+                }
+            }, 1500);
+        }
+
+        function resetApp() {
+            showScreen('role-screen');
+        }
+        window.resetApp = resetApp;
+
+        // Initialize dropdowns and events on load
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('book-select').addEventListener('change', populateQuizDropdown);
+            document.getElementById('type-select').addEventListener('change', populateQuizDropdown);
+            populateQuizDropdown();
+        });
+    </script>
+</body>
+</html>
